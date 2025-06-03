@@ -1,4 +1,3 @@
-
 /*
 
     Goldleaf - Multipurpose homebrew tool for Nintendo Switch
@@ -91,17 +90,20 @@ namespace nfp {
         const auto mii_charinfo = "mii-charinfo.bin";
         sd_exp->WriteFile(amiibo_path + "/" + mii_charinfo, &data.register_info.mii, sizeof(data.register_info.mii));
 
+        // use correct member name for legacy mii data
         const auto legacy_mii = "legacy-mii.bin";
-        sd_exp->WriteFile(amiibo_path + "/" + legacy_mii, &data.data.mii_v3, sizeof(data.data.mii_v3));
+        sd_exp->WriteFile(amiibo_path + "/" + legacy_mii, &data.data.mii, sizeof(data.data.mii));
 
         json::Uuid uuid;
-        for(u32 i = 0; i < sizeof(data.tag_info.uid.uid); i++) {
-            uuid.push_back(data.tag_info.uid.uid[i]);
+        // use 'uuid' instead of 'uid'
+        for(u32 i = 0; i < sizeof(data.tag_info.uuid); i++) {
+            uuid.push_back(data.tag_info.uuid[i]);
         }
 
         json::Amiibo amiibo  = {
-            .first_write_date = { data.register_info.first_write_date.day, data.register_info.first_write_date.month, data.register_info.first_write_date.year },
-            .last_write_date = { data.common_info.last_write_date.day, data.common_info.last_write_date.month, data.common_info.last_write_date.year },
+            // use separate day/month/year fields instead of date struct
+            .first_write_date = { data.register_info.first_write_day, data.register_info.first_write_month, data.register_info.first_write_year },
+            .last_write_date = { data.common_info.last_write_day, data.common_info.last_write_month, data.common_info.last_write_year },
             .name = data.register_info.amiibo_name,
             .version = data.common_info.version,
             .write_counter = data.common_info.write_counter,
@@ -122,15 +124,16 @@ namespace nfp {
             const auto areas_dir = amiibo_path + "/areas";
             sd_exp->CreateDirectory(areas_dir);
 
-            const auto area_path = areas_dir + "/" + util::FormatHex(data.admin_info.access_id) + ".bin";
+            // use correct member name for access ID
+            const auto area_path = areas_dir + "/" + util::FormatHex(data.admin_info.application_area_id) + ".bin";
             sd_exp->WriteFile(area_path, data.data.application_area, sizeof(data.data.application_area));
 
             json::AreaInfo area_info = {
-                .current_area_access_id = data.admin_info.access_id,
+                .current_area_access_id = data.admin_info.application_area_id,
                 .areas = {
                     {
                         .program_id = data.admin_info.application_id,
-                        .access_id = data.admin_info.access_id
+                        .access_id = data.admin_info.application_area_id
                     }
                 },
             };
