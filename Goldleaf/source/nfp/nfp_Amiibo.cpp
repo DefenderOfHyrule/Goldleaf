@@ -1,5 +1,4 @@
 /*
-
     Goldleaf - Multipurpose homebrew tool for Nintendo Switch
     Copyright © 2018-2025 XorTroll
 
@@ -7,15 +6,6 @@
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 */
 
 #include <nfp/nfp_Amiibo.hpp>
@@ -33,7 +23,6 @@ namespace nfp {
 
     Result Initialize() {
         if(!g_Initialized) {
-            // Note: using debug service (for genuine amiibos) since this isn't intercepted by emuiibo
             GLEAF_RC_TRY(nfpInitialize(NfpServiceType_Debug));
             GLEAF_RC_TRY(nfpListDevices(nullptr, &g_DeviceHandle, 1));
             GLEAF_RC_TRY(nfpStartDetection(&g_DeviceHandle));
@@ -90,20 +79,17 @@ namespace nfp {
         const auto mii_charinfo = "mii-charinfo.bin";
         sd_exp->WriteFile(amiibo_path + "/" + mii_charinfo, &data.register_info.mii, sizeof(data.register_info.mii));
 
-        // use correct member name for legacy mii data
         const auto legacy_mii = "legacy-mii.bin";
-        sd_exp->WriteFile(amiibo_path + "/" + legacy_mii, &data.data.mii, sizeof(data.data.mii));
+        sd_exp->WriteFile(amiibo_path + "/" + legacy_mii, &data.data.mii_v3, sizeof(data.data.mii_v3));
 
         json::Uuid uuid;
-        // use 'uuid' instead of 'uid'
-        for(u32 i = 0; i < sizeof(data.tag_info.uuid); i++) {
-            uuid.push_back(data.tag_info.uuid[i]);
+        for(u32 idx = 0; idx < data.tag_info.uid.uid_length; idx++) {
+            uuid.push_back(data.tag_info.uid.uid[idx]);
         }
 
         json::Amiibo amiibo  = {
-            // use separate day/month/year fields instead of date struct
-            .first_write_date = { data.register_info.first_write_day, data.register_info.first_write_month, data.register_info.first_write_year },
-            .last_write_date = { data.common_info.last_write_day, data.common_info.last_write_month, data.common_info.last_write_year },
+            .first_write_date = { data.register_info.first_write_date.day, data.register_info.first_write_date.month, data.register_info.first_write_date.year },
+            .last_write_date  = { data.common_info.last_write_date.day,   data.common_info.last_write_date.month,   data.common_info.last_write_date.year },
             .name = data.register_info.amiibo_name,
             .version = data.common_info.version,
             .write_counter = data.common_info.write_counter,
@@ -119,21 +105,19 @@ namespace nfp {
         };
         GLEAF_ASSERT_TRUE(!glz::write_file_json<PartialJsonOptions{}>(amiibo, sd_exp->MakeAbsolute(amiibo_path + "/amiibo.json"), std::string{}));
 
-        // If the amiibo has application area...
-        if(data.admin_info.flags & BIT(1)) {
+        if(data.admin_info.flags & BIT(1)) { // NfpAmiiboFlag_ApplicationAreaExists
             const auto areas_dir = amiibo_path + "/areas";
             sd_exp->CreateDirectory(areas_dir);
 
-            // use correct member name for access ID
-            const auto area_path = areas_dir + "/" + util::FormatHex(data.admin_info.application_area_id) + ".bin";
+            const auto area_path = areas_dir + "/" + util::FormatHex(data.admin_info.access_id) + ".bin";
             sd_exp->WriteFile(area_path, data.data.application_area, sizeof(data.data.application_area));
 
             json::AreaInfo area_info = {
-                .current_area_access_id = data.admin_info.application_area_id,
+                .current_area_access_id = data.admin_info.access_id,
                 .areas = {
                     {
                         .program_id = data.admin_info.application_id,
-                        .access_id = data.admin_info.application_area_id
+                        .access_id = data.admin_info.access_id
                     }
                 },
             };
@@ -155,4 +139,4 @@ namespace nfp {
         }
     }
 
-}
+} // namespace nfp

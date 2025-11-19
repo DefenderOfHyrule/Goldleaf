@@ -1,6 +1,4 @@
-
 /*
-
     Goldleaf - Multipurpose homebrew tool for Nintendo Switch
     Copyright © 2018-2025 XorTroll
 
@@ -8,15 +6,6 @@
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 */
 
 #pragma once
@@ -63,7 +52,7 @@ namespace nfp {
             std::vector<AreaInfoEntry> areas;
         };
 
-    }
+    } // namespace json
 
     struct CharacterId {
         u16 game_character_id;
@@ -81,16 +70,17 @@ namespace nfp {
     static_assert(sizeof(InternalAmiiboId) == 8);
 
     constexpr InternalAmiiboId GetInternalAmiiboIdFromModelInfo(const NfpModelInfo &model_info) {
-    InternalAmiiboId amiibo_id = {};
-    
-    amiibo_id.character_id.game_character_id = model_info.amiibo_id[0];
-    amiibo_id.character_id.character_variant = model_info.amiibo_id[1];
-    amiibo_id.series = model_info.amiibo_id[2];
-    amiibo_id.model_number = model_info.amiibo_id[3];
-    amiibo_id.figure_type = model_info.amiibo_id[4];
-    
-    return amiibo_id;
+        InternalAmiiboId amiibo_id = {};
+
+        amiibo_id.character_id.game_character_id = model_info.game_character_id;
+        amiibo_id.character_id.character_variant = model_info.character_variant;
+        amiibo_id.series = model_info.series_id;
+        amiibo_id.model_number = model_info.numbering_id;
+        amiibo_id.figure_type = model_info.nfp_type;
+
+        return amiibo_id;
     }
+
     struct AmiiboData {
         NfpTagInfo tag_info;
         NfpRegisterInfo register_info;
@@ -108,4 +98,4 @@ namespace nfp {
     void Close();
     void Exit();
 
-}
+} // namespace nfp
